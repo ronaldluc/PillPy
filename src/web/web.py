@@ -10,9 +10,9 @@ the path can be omitted.
 """
 import os
 from time import sleep
-from fastai.vision import *
-from fastai.metrics import error_rate, accuracy
-from fastai.callbacks import *
+#from fastai.vision import *
+#from fastai.metrics import error_rate, accuracy
+#from fastai.callbacks import *
 
 import cv2
 import numpy as np
@@ -44,54 +44,37 @@ class HTTPRequestHandler(server.SimpleHTTPRequestHandler):
     #         super().__init__(request, client_address, server)
     #         self.model = load_learner('data/models', model_name, test=test)
 
-    model = load_learner('data/models', model_name)
-
-    def do_PUT(self):
-        """Save a file following a HTTP PUT request"""
-        filename = os.path.basename(self.path)
-
-        # Don't overwrite files
-        if os.path.exists(filename):
-            print('Overwritten')
-
-        file_length = int(self.headers['Content-Length'])
-        with open(filename, 'wb') as output_file:
-            output_file.write(self.rfile.read(file_length))
-        self.send_response(201, 'Created')
-        self.end_headers()
-        sleep(3)
-        reply_body = f'{randomString(8)}'
-        self.wfile.write(reply_body.encode('utf-8'))
+    #model = load_learner('data/models', model_name)
 
     def do_POST(self):
         """Save a file following a HTTP POST request"""
-        filename = os.path.basename(self.path)
+        #filename = "pes"
 
-        file_length = int(self.headers['Content-Length'])
-        with open(filename, 'wb') as output_file:
-            output_file.write(self.rfile.read(file_length))
+        #file_length = int(self.headers['Content-Length'])
+        #with open(filename, 'wb') as output_file:
+            #output_file.write(self.rfile.read(file_length))
 
-        frame = cv2.imread(filename)
+        #frame = cv2.imread(filename)
 
-        width = int(frame.shape[1] * 0.5)
-        height = int(frame.shape[0] * 0.5)
-        #         dim = (int(frame.shape[1] * 0.5), int(frame.shape[0] * 0.5))
+        #width = int(frame.shape[1] * 0.5)
+        #height = int(frame.shape[0] * 0.5)
+        ##         dim = (int(frame.shape[1] * 0.5), int(frame.shape[0] * 0.5))
 
-        frame = frame[(frame.shape[0] - height) // 2: (frame.shape[0] + height) // 2,
-                (frame.shape[1] - width) // 2:  (frame.shape[1] + width) // 2]
-        #         frame = cv2.resize(frame, dim, interpolation = cv2.INTER_AREA)
-        #         crop_img = img[y:y+h, x:x+w]
-        cv2.imwrite('cropped.jpg', frame)
+        #frame = frame[(frame.shape[0] - height) // 2: (frame.shape[0] + height) // 2,
+                #(frame.shape[1] - width) // 2:  (frame.shape[1] + width) // 2]
+        ##         frame = cv2.resize(frame, dim, interpolation = cv2.INTER_AREA)
+        ##         crop_img = img[y:y+h, x:x+w]
+        #cv2.imwrite('cropped.jpg', frame)
 
-        img = open_image('cropped.jpg')
-        cat, _, prob = self.model.predict(img)
-        self.send_response(201, 'Created')
+        #img = open_image('cropped.jpg')
+        #cat, _, prob = self.model.predict(img)
+        self.send_response(200, 'Created')
         self.end_headers()
         #         reply_body = f'{cat.strip(['% \n'])}\n'
-        reply_body = str(int(str(cat).strip('% \n')) / 100)
-        print(cat, prob)
+        reply_body = "From Server!"
+        #print(cat, prob)
         self.wfile.write(reply_body.encode('utf-8'))
 
 
 if __name__ == '__main__':
-    server.test(HandlerClass=HTTPRequestHandler, port=8080)
+    server.test(HandlerClass=HTTPRequestHandler, port=4444)
