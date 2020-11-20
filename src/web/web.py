@@ -8,11 +8,7 @@ curl or wget can be used to send files with options similar to the following
 __Note__: curl automatically appends the filename onto the end of the URL so
 the path can be omitted.
 """
-import os
 from time import sleep
-#from fastai.vision import *
-#from fastai.metrics import error_rate, accuracy
-#from fastai.callbacks import *
 
 import cv2
 import numpy as np
@@ -22,16 +18,10 @@ import multiprocessing
 from pathlib import Path
 
 from glob import glob
-
 from PIL import ImageFile
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
-
-try:
-    import http.server as server
-except ImportError:
-    # Handle Python 2.x
-    import SimpleHTTPServer as server
+import http.server as server
 
 import random
 import string
@@ -40,11 +30,8 @@ import string
 class HTTPRequestHandler(server.SimpleHTTPRequestHandler):
     """Extend SimpleHTTPRequestHandler to handle PUT requests"""
 
-    #     def __init__(self, request, client_address, server):
-    #         super().__init__(request, client_address, server)
-    #         self.model = load_learner('data/models', model_name, test=test)
-
-    #model = load_learner('data/models', model_name)
+    def __init__(self, request, client_address, server):
+        super().__init__(request, client_address, server)
 
     def do_POST(self):
         """Save a file following a HTTP POST request"""
@@ -72,6 +59,7 @@ class HTTPRequestHandler(server.SimpleHTTPRequestHandler):
         self.end_headers()
         #         reply_body = f'{cat.strip(['% \n'])}\n'
         reply_body = "From Server!"
+        print(reply_body)
         #print(cat, prob)
         self.wfile.write(reply_body.encode('utf-8'))
 
