@@ -41,8 +41,10 @@ class Processor(object):
         drug_list_processed = []
         with open(self.DRUG_LIST_FILE) as drug_list_f:
             drug_list = drug_list_f.readlines()
-            drug_list_processed = list(map(lambda x: set(x.lower().split()), drug_list))
-            list_of_words_for_ocr += drug_list
+            for drug in drug_list:
+                drug_list_processed.append(drug.lower().split())
+                list_of_words_for_ocr.append(drug.lower().split())
+                list_of_words_for_ocr.append(drug)
 
         ean_to_drugs_dict = {}
         with open(self.EAN_TO_DRUG_LIST_FILE) as drug_list_f:
