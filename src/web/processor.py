@@ -305,6 +305,25 @@ class Processor(object):
 
         return results_processed
 
+    def get_and_process_OCR_multirot(self, image):
+        best_drug, best_score = None, -1
+
+        for rot_frame in self.get_rotated_pictures(image):
+            drug, score = self.get_and_process_OCR(rot_frame)
+            if score > best_score:
+                best_drug, best_score = drug, score
+
+            if score > 10_000: return (True, best_drug)
+
+
+        if best_drug:
+            print(f"OCR match: {best_drug}")
+            return (True, best_drug)
+        else:
+            print(f"OCR no-match")
+            return (False, None)
+
+
     def get_and_process_OCR(self, image):
         words_set_ocr = self.get_ocr_text_EAST(image)
         words_set_ocr = set(filter(lambda x: len(x) > 2, words_set_ocr))
@@ -328,12 +347,7 @@ class Processor(object):
         else:
             best_drug, best_score,  = best_drug_tess, best_score_tess
 
-        if best_drug:
-            print(f"OCR match: {best_drug}")
-            return (True, best_drug)
-        else:
-            print(f"OCR no-match")
-            return (False, None)
+        return (best_drug, best_score)
 
     def process(self, img_path: PathLike) -> Tuple[bool, str]:
 
@@ -344,9 +358,9 @@ class Processor(object):
 
         # self.try_detect_barcodes(frame)
         # when we get barcode bounding box -> transform the image to get nice orthogonal view (i.e apply transf. so that b.b is non-rotated rect)
-        for frame in self.get_rotated_pictures(frame):
+        for rot_frame in self.get_rotated_pictures(frame):
             if self.ENABLE_ZBAR_CODE:
-                codes_zbar = pyzbar.decode(frame)
+                codes_zbar = pyzbar.decode(rot_frame)
                 for code in codes_zbar:
                     data, type = code.data.decode("utf-8"), code.type
 
@@ -363,16 +377,16 @@ class Processor(object):
                         return (succ, name)
 
             if self.ENABLE_OPENCV_QR:
-                qr_codes = self.get_QR_codes_openCV(frame)
+                qr_codes = self.get_QR_codes_openCV(rot_frame)
                 for data in qr_codes:
                     succ, name = self.process_qr_code(data)
                     if succ:
                         return (succ, name)
 
-            if self.ENABLE_OCR:
-                succ, name = self.get_and_process_OCR(frame)
-                if succ:
-                    return (succ, name)
+        if self.ENABLE_OCR:
+            succ, name = self.get_and_process_OCR_multirot(frame)
+            if succ:
+                return (succ, name)
 
         ##         dim = (int(frame.shape[1] * 0.5), int(frame.shape[0] * 0.5))
 
