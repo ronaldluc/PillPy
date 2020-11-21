@@ -27,6 +27,7 @@ import random
 import string
 
 import cgi
+import json
 
 class HTTPRequestHandler(server.BaseHTTPRequestHandler):
     """Extend SimpleHTTPRequestHandler to handle PUT requests"""
@@ -83,8 +84,10 @@ class HTTPRequestHandler(server.BaseHTTPRequestHandler):
         self.send_response(200, 'Created')
         self.end_headers()
 
-        reply_body = "From Server!"
+        # reply_body = json.dumps({"success": False, "name": None})
+        reply_body = json.dumps({"success": True, "name": "Paralen"})
         print(f"Response: {reply_body}")
+
         
         self.wfile.write(reply_body.encode('utf-8'))
 
