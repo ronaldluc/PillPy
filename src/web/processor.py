@@ -388,17 +388,6 @@ class Processor(object):
             if succ:
                 return (succ, name)
 
-        ##         dim = (int(frame.shape[1] * 0.5), int(frame.shape[0] * 0.5))
-
-        #frame = frame[(frame.shape[0] - height) // 2: (frame.shape[0] + height) // 2,
-                #(frame.shape[1] - width) // 2:  (frame.shape[1] + width) // 2]
-        ##         frame = cv2.resize(frame, dim, interpolation = cv2.INTER_AREA)
-        ##         crop_img = img[y:y+h, x:x+w]
-        #cv2.imwrite('cropped.jpg', frame)
-
-        #img = open_image('cropped.jpg')
-        #cat, _, prob = self.model.predict(img)
-
         return (False, None)
 
 
