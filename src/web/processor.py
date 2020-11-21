@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 from pyzbar import pyzbar
 import pytesseract
+import re
 
 
 from PIL import ImageFile
@@ -17,6 +18,7 @@ class Processor(object):
     ENABLE_OCR = True
 
     DRUG_LIST_FILE = "./../../data/drug_names.txt"
+    EAN_TO_DRUG_LIST_FILE = "./../../data/drug_ean_to_names.txt"
 
     def __init__(self) -> None:
         self.qr_detector = cv2.QRCodeDetector()
@@ -24,26 +26,36 @@ class Processor(object):
             self.drug_list = drug_list_f.readlines()
             self.drug_list_processed = list(map(lambda x: set(x.lower().split()), self.drug_list))
 
+        with open(self.EAN_TO_DRUG_LIST_FILE) as drug_list_f:
+            ean_to_drugs_list = drug_list_f.readlines()
+            ean_to_drugs_dict = {}
+            for ean_to_drug in ean_to_drugs_list:
+                ean, drug = ean_to_drug.split(" ", 1)
+                ean_to_drugs_dict[ean] = drug
+
+            self.ean_to_drugs_dict = ean_to_drugs_dict
+
     def get_QR_codes_openCV(self, frame):
         detector = self.qr_detector
 
         _, decoded_info, _, _ = detector.detectAndDecodeMulti(frame)
         return decoded_info 
 
-    def process_qr_code(qr_code) -> Tuple[bool, str]:
-        print(f"Found QR code: {qr_code}")
+    def process_qr_code(self, code) -> Tuple[bool, str]:
+        print(f"Found QR code: {code}")
 
         return (True, "Paralen")
 
-    def process_EAN13_code(qr_code) -> Tuple[bool, str]:
-        print(f"Found EAN13 code: {qr_code}")
+    def process_EAN_code(self, code) -> Tuple[bool, str]:
+        print(f"Found EAN code: {code}")
 
-        return (True, "Paralen")
+        if code in self.ean_to_drugs_dict:
+            best_drug = self.ean_to_drugs_dict[code]
+            print(f"EAN match: {best_drug}")
+            return (True, best_drug)
 
-    def process_EAN8_code(qr_code) -> Tuple[bool, str]:
-        print(f"Found EAN8 code: {qr_code}")
-
-        return (True, "Paralen")
+        print(f"EAN no-match")
+        return (False, None)
 
     def try_detect_barcode(self, image):
         # Maybe: https://www.mdpi.com/2076-3417/9/16/3268/htm
@@ -94,7 +106,7 @@ class Processor(object):
         text_ocr = self.get_ocr_text_tesseract(image)
         words_set_ocr = set(text_ocr.lower().split())
 
-        print(words_set_ocr)
+        print(f"Found OCR {words_set_ocr}")
 
         best_drug, best_drug_inter_len = None, -1
         for i, drug_hr in enumerate(self.drug_list):
@@ -130,9 +142,9 @@ class Processor(object):
                 if type == "QRCODE":
                     succ, name = self.process_qr_code(data)
                 elif type == "EAN13":
-                    succ, name = self.process_EAN13_code(data)
+                    succ, name = self.process_EAN_code(data)
                 elif type == "EAN8":
-                    succ, name = self.process_EAN13_code(data)
+                    succ, name = self.process_EAN_code(data)
                 else:
                     succ, name = False, None
 
