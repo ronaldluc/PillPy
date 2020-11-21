@@ -2,3 +2,4 @@ opencv-python
 numpy
 pillow
 pyzbar
+pytesseract

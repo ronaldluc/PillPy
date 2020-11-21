@@ -5,11 +5,17 @@ from typing import Tuple
 import cv2
 import numpy as np
 from pyzbar import pyzbar
+import pytesseract
+
 
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 class Processor(object):
+    ENABLE_ZBAR_CODE = True
+    ENABLE_OPENCV_QR = True
+    ENABLE_OCR = True
+
     def __init__(self) -> None:
         self.qr_detector = cv2.QRCodeDetector() 
 
@@ -73,39 +79,52 @@ class Processor(object):
         # actually gets you rotated rect instead of quadrilateral
         return box
 
+    def get_and_process_OCR(self, image):
+        custom_config = r'--oem 3 --psm 6'
+        text_ocr = pytesseract.image_to_string(image, config=custom_config)
+        print(text_ocr)
+        
+        return (True, "Paralen")
+
     def process(self, img_path: PathLike) -> Tuple[bool, str]:
 
         frame = cv2.imread(img_path)
 
-        width = int(frame.shape[1])
-        height = int(frame.shape[0])
+        width, height = int(frame.shape[1]), int(frame.shape[0])
+        print(f"Uploaded w:{width}, h:{height}")
 
         # self.try_detect_barcodes(frame)
         # when we get barcode bounding box -> transform the image to get nice orthogonal view (i.e apply transf. so that b.b is non-rotated rect)
         
-        codes_zbar = pyzbar.decode(frame)
-        for code in codes_zbar:
-            data, type = code.data.decode("utf-8"), code.type
+        if self.ENABLE_ZBAR_CODE:
+            codes_zbar = pyzbar.decode(frame)
+            for code in codes_zbar:
+                data, type = code.data.decode("utf-8"), code.type
 
-            if type == "QRCODE":
+                if type == "QRCODE":
+                    succ, name = self.process_qr_code(data)
+                elif type == "EAN13":
+                    succ, name = self.process_EAN13_code(data)
+                elif type == "EAN8":
+                    succ, name = self.process_EAN13_code(data)
+                else:
+                    succ, name = False, None
+
+                if succ:
+                    return (succ, name)
+
+        if self.ENABLE_OPENCV_QR:
+            qr_codes = self.get_QR_codes_openCV(frame)
+            for data in qr_codes:
                 succ, name = self.process_qr_code(data)
-            elif type == "EAN13":
-                succ, name = self.process_EAN13_code(data)
-            elif type == "EAN8":
-                succ, name = self.process_EAN13_code(data)
-            else:
-                succ, name = False, None
-
-            if succ:
-                return (succ, name)
-
-        qr_codes = self.get_QR_codes_openCV(frame)
-        for data in qr_codes:
-            succ, name = self.process_qr_code(data)
-            if succ:
-                return (succ, name)
+                if succ:
+                    return (succ, name)
         
-        print(f"Uploaded w:{width}, h:{height}")
+        if self.ENABLE_OCR:
+            succ, name = self.get_and_process_OCR(frame)
+            if succ:
+                return (succ, name)
+
         ##         dim = (int(frame.shape[1] * 0.5), int(frame.shape[0] * 0.5))
 
         #frame = frame[(frame.shape[0] - height) // 2: (frame.shape[0] + height) // 2,
