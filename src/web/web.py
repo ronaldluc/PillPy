@@ -33,15 +33,26 @@ class HTTPRequestHandler(server.SimpleHTTPRequestHandler):
     def __init__(self, request, client_address, server):
         super().__init__(request, client_address, server)
 
+    def init_tmp_folder(self):
+        file_folder = "tmp"
+
+        folder_path = Path(os.path.join(os.getcwd(), file_folder))
+        folder_path.mkdir(exist_ok=True)
+
+        return folder_path
+
+
     def do_POST(self):
         """Save a file following a HTTP POST request"""
-        #filename = "pes"
+        file_name = "42.flutrpng"
+        folder_path = self.init_tmp_folder()
+        file_path = os.path.join(folder_path, file_name)
 
-        #file_length = int(self.headers['Content-Length'])
-        #with open(filename, 'wb') as output_file:
-            #output_file.write(self.rfile.read(file_length))
+        file_length = int(self.headers['Content-Length'])
+        with open(file_path, 'wb') as output_file:
+            output_file.write(self.rfile.read(file_length))
 
-        #frame = cv2.imread(filename)
+        frame = cv2.imread(file_path)
 
         #width = int(frame.shape[1] * 0.5)
         #height = int(frame.shape[0] * 0.5)
@@ -57,10 +68,10 @@ class HTTPRequestHandler(server.SimpleHTTPRequestHandler):
         #cat, _, prob = self.model.predict(img)
         self.send_response(200, 'Created')
         self.end_headers()
-        #         reply_body = f'{cat.strip(['% \n'])}\n'
+
         reply_body = "From Server!"
         print(reply_body)
-        #print(cat, prob)
+        
         self.wfile.write(reply_body.encode('utf-8'))
 
 
