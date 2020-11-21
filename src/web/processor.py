@@ -85,7 +85,7 @@ class Processor(object):
         return box
 
     def get_ocr_text_tesseract(self, image):
-        custom_config = r'--oem 3 --psm 1 --user-words "' + self.DRUG_LIST_FILE +  '"'
+        custom_config = r'--oem 3 -l ces --psm 1 --user-words "' + self.DRUG_LIST_FILE +  '"'
         text_ocr = pytesseract.image_to_string(image, config=custom_config)
 
         return text_ocr
