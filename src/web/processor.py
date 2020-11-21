@@ -105,9 +105,12 @@ class Processor(object):
             if intersection_len > 0 and intersection_len > best_drug_inter_len:
                 best_drug_inter_len, best_drug = intersection_len, drug_hr
 
-        print(best_drug)
-        
-        return (True, "Paralen")
+        if best_drug:
+            print(f"OCR match: {best_drug}")
+            return (True, best_drug)
+        else:
+            print(f"OCR no-match")
+            return (False, None)
 
     def process(self, img_path: PathLike) -> Tuple[bool, str]:
 
