@@ -43,8 +43,15 @@ class Processor(object):
 
     def process_qr_code(self, code) -> Tuple[bool, str]:
         print(f"Found QR code: {code}")
+        processed_qr_string = set(code.split())
+        best_drug = self.find_intersection_in_drugs_names_list(processed_qr_string)
 
-        return (True, "Paralen")
+        if best_drug:
+            print(f"QR match: {best_drug}")
+            return (True, best_drug)
+        else:
+            print(f"QR no-match")
+            return (False, None)
 
     def process_EAN_code(self, code) -> Tuple[bool, str]:
         print(f"Found EAN code: {code}")
@@ -102,20 +109,25 @@ class Processor(object):
 
         return text_ocr
 
+    def find_intersection_in_drugs_names_list(self, set_of_words):
+        best_drug, best_drug_inter_len = None, -1
+        for i, drug_hr in enumerate(self.drug_list):
+            drug_processed_set = self.drug_list_processed[i]
+
+            intersection_len = len(set_of_words.intersection(drug_processed_set))
+            
+            if intersection_len > 0 and intersection_len > best_drug_inter_len:
+                best_drug_inter_len, best_drug = intersection_len, drug_hr
+
+        return best_drug
+
+
     def get_and_process_OCR(self, image):
         text_ocr = self.get_ocr_text_tesseract(image)
         words_set_ocr = set(text_ocr.lower().split())
 
         print(f"Found OCR {words_set_ocr}")
-
-        best_drug, best_drug_inter_len = None, -1
-        for i, drug_hr in enumerate(self.drug_list):
-            drug_processed_set = self.drug_list_processed[i]
-
-            intersection_len = len(words_set_ocr.intersection(drug_processed_set))
-            
-            if intersection_len > 0 and intersection_len > best_drug_inter_len:
-                best_drug_inter_len, best_drug = intersection_len, drug_hr
+        best_drug = self.find_intersection_in_drugs_names_list(words_set_ocr)
 
         if best_drug:
             print(f"OCR match: {best_drug}")
