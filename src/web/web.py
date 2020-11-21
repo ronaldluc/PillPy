@@ -93,7 +93,7 @@ class HTTPRequestHandler(server.BaseHTTPRequestHandler):
         self.wfile.write(reply_body.encode('utf-8'))
         
         # cleanup
-        os.remove(file_path)
+        #os.remove(file_path)
 
 
 if __name__ == '__main__':

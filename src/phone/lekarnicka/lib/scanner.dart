@@ -4,10 +4,13 @@ import 'dart:convert';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:lekarnicka/druglist.dart';
 import 'package:path/path.dart' show join;
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+
+import 'bigbutton.dart';
 
 // A screen that allows users to take a picture using a given camera.
 class DrugScanner extends StatefulWidget {
@@ -25,6 +28,8 @@ class DrugScanner extends StatefulWidget {
 class DrugScannerState extends State<DrugScanner> {
   CameraController _controller;
   Future<void> _initializeControllerFuture;
+
+  static bool startCalls = true;
 
   static double buttonHeight = 80;
   static double fontSize = 30;
@@ -48,12 +53,14 @@ class DrugScannerState extends State<DrugScanner> {
     // Next, initialize the controller. This returns a Future.
     _initializeControllerFuture = _controller.initialize();
 
-    Timer(Duration(seconds: 1), () => _runRecognition(null));
-    // starting timer
-    photoTimer = Timer.periodic(
-      Duration(seconds: 10),
-      _runRecognition,
-    );
+    if (startCalls) {
+      Timer(Duration(seconds: 1), () => _runRecognition(null));
+      // starting timer
+      photoTimer = Timer.periodic(
+        Duration(seconds: 10),
+        _runRecognition,
+      );
+    }
   }
 
   @override
@@ -103,33 +110,22 @@ class DrugScannerState extends State<DrugScanner> {
           Container(
             alignment: Alignment.topCenter,
             padding: EdgeInsets.all(10),
-            child: ButtonTheme(
-              height: buttonHeight,
-              minWidth: double.infinity,
-              buttonColor: Colors.green,
-              child: RaisedButton(
-                child: Text(
-                  "Seznam léků",
-                  style: TextStyle(fontSize: fontSize),
-                ),
-                onPressed: () => null,
-              ),
+            child: BigButton(
+              "seznam léků",
+              () => {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => DrugList()),
+                )
+              },
             ),
           ),
           Container(
             alignment: Alignment.bottomCenter,
             padding: EdgeInsets.all(10),
-            child: ButtonTheme(
-              height: buttonHeight,
-              minWidth: double.infinity,
-              buttonColor: Colors.green,
-              child: RaisedButton(
-                child: Text(
-                  "Přidat lék manuálně",
-                  style: TextStyle(fontSize: fontSize),
-                ),
-                onPressed: () => null,
-              ),
+            child: BigButton(
+              "Přidat lék manuálně",
+              () => null,
             ),
           ),
         ],
@@ -161,15 +157,14 @@ class DrugScannerState extends State<DrugScanner> {
     var request = new http.MultipartRequest("POST", url);
     request.fields['user'] = 'someone@somewhere.com';
     request.files.add(await http.MultipartFile.fromPath(
-      'package',
+      'upload',
       path,
-      contentType: MediaType('application', 'x-tar'),
+      contentType: MediaType('image', 'png'),
     ));
     var req = request.send();
     print("Request sent");
     try {
-      var response = await req
-          .timeout(const Duration(seconds: 5));
+      var response = await req.timeout(const Duration(seconds: 5));
       print("Got response $response");
       if (response.statusCode == 200) {
         return response.stream.bytesToString();
