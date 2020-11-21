@@ -1,1 +1,1 @@
-- Test POST: `curl -X POST --upload-file ./../../data/received_data localhost:4444`
+- Test POST: `curl -v -F upload=@./../../data/somepicture.png localhost:4444`

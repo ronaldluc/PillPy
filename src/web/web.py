@@ -26,8 +26,9 @@ import http.server as server
 import random
 import string
 
+import cgi
 
-class HTTPRequestHandler(server.SimpleHTTPRequestHandler):
+class HTTPRequestHandler(server.BaseHTTPRequestHandler):
     """Extend SimpleHTTPRequestHandler to handle PUT requests"""
 
     def __init__(self, request, client_address, server):
@@ -41,21 +42,34 @@ class HTTPRequestHandler(server.SimpleHTTPRequestHandler):
 
         return folder_path
 
+    def get_data_from_multipart(self):
+        ctype, pdict = cgi.parse_header(self.headers['content-type'])
+        pdict['boundary'] = bytes(pdict['boundary'], "utf-8")
+
+        assert ctype == 'multipart/form-data'
+
+        fields = cgi.parse_multipart(self.rfile, pdict)
+        msg_raw = fields.get('upload')[0]
+
+        return msg_raw
+
 
     def do_POST(self):
         """Save a file following a HTTP POST request"""
-        file_name = "42.flutrpng"
+        file_name = "42.png"
         folder_path = self.init_tmp_folder()
         file_path = os.path.join(folder_path, file_name)
 
-        file_length = int(self.headers['Content-Length'])
+        msg_raw = self.get_data_from_multipart()
         with open(file_path, 'wb') as output_file:
-            output_file.write(self.rfile.read(file_length))
+            output_file.write(msg_raw)
 
         frame = cv2.imread(file_path)
 
-        #width = int(frame.shape[1] * 0.5)
-        #height = int(frame.shape[0] * 0.5)
+        width = int(frame.shape[1])
+        height = int(frame.shape[0])
+
+        print(f"Uploaded w:{width}, h:{height}")
         ##         dim = (int(frame.shape[1] * 0.5), int(frame.shape[0] * 0.5))
 
         #frame = frame[(frame.shape[0] - height) // 2: (frame.shape[0] + height) // 2,
@@ -70,7 +84,7 @@ class HTTPRequestHandler(server.SimpleHTTPRequestHandler):
         self.end_headers()
 
         reply_body = "From Server!"
-        print(reply_body)
+        print(f"Response: {reply_body}")
         
         self.wfile.write(reply_body.encode('utf-8'))
 
