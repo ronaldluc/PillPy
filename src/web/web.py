@@ -28,11 +28,13 @@ import string
 
 import cgi
 import json
+import uuid
 
 class HTTPRequestHandler(server.BaseHTTPRequestHandler):
     """Extend SimpleHTTPRequestHandler to handle PUT requests"""
 
     def __init__(self, request, client_address, server):
+        self.tmp_folder_path = self.init_tmp_folder()
         super().__init__(request, client_address, server)
 
     def init_tmp_folder(self):
@@ -44,22 +46,22 @@ class HTTPRequestHandler(server.BaseHTTPRequestHandler):
         return folder_path
 
     def get_data_from_multipart(self):
+        # Adapted from: https://gist.github.com/MFry/90382082f9a65eceabd007ee7182af92
         ctype, pdict = cgi.parse_header(self.headers['content-type'])
         pdict['boundary'] = bytes(pdict['boundary'], "utf-8")
 
         assert ctype == 'multipart/form-data'
 
         fields = cgi.parse_multipart(self.rfile, pdict)
-        msg_raw = fields.get('upload')[0]
+        upload_field = fields.get('upload')
+        assert len(upload_field) == 1
 
-        return msg_raw
-
+        return upload_field[0]
 
     def do_POST(self):
         """Save a file following a HTTP POST request"""
-        file_name = "42.png"
-        folder_path = self.init_tmp_folder()
-        file_path = os.path.join(folder_path, file_name)
+        file_name = f"{uuid.uuid4()}.png"
+        file_path = os.path.join(self.tmp_folder_path, file_name)
 
         msg_raw = self.get_data_from_multipart()
         with open(file_path, 'wb') as output_file:
@@ -88,8 +90,10 @@ class HTTPRequestHandler(server.BaseHTTPRequestHandler):
         reply_body = json.dumps({"success": True, "name": "Paralen"}) # {"success": true, "name": "Paralen"}
         print(f"Response: {reply_body}")
 
-        
         self.wfile.write(reply_body.encode('utf-8'))
+        
+        # cleanup
+        os.remove(file_path)
 
 
 if __name__ == '__main__':
