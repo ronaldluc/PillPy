@@ -154,7 +154,7 @@ if __name__ == "__main__":
 		# wish to use the LSTM neural net model for OCR, and finally
 		# (3) an OEM value, in this case, 7 which implies that we are
 		# treating the ROI as a single line of text
-		config = (f"-l eng --oem 1 --psm 7 --user-words ./../../data/OCR_dict.txt")
+		config = (f"-l eng --oem 1 --psm 7")
 		text = pytesseract.image_to_string(roi, config=config)
 
 		# add the bounding box coordinates and OCR'd text to the list

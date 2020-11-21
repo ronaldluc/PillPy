@@ -10,14 +10,19 @@ import pytesseract
 import re
 import csv
 
+import tensorflow as tf
+from scipy import ndimage
+
 from text_recognition import decode_predictions
 from imutils.object_detection import non_max_suppression
+from rotator import Rotator
+
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 class Processor(object):
     ENABLE_ZBAR_CODE = False
-    ENABLE_OPENCV_QR = False
+    ENABLE_OPENCV_QR = True
     ENABLE_OCR = True
 
 
@@ -27,6 +32,7 @@ class Processor(object):
 
     OCR_DICT = "./../../data/OCR_dict.txt"
     EAST_DETECTOR = "./frozen_east_text_detection.pb"
+    ROTATOR = "./rotator_6.2"
 
     @staticmethod
     def __until_first_lower_case(string):
@@ -38,6 +44,7 @@ class Processor(object):
     def __init__(self) -> None:
         self.qr_detector = cv2.QRCodeDetector()
         self.east = cv2.dnn.readNet(self.EAST_DETECTOR)        # load the pre-trained EAST text detector
+        self.rotator = Rotator(self.ROTATOR)
 
         list_of_words_for_ocr = []
 
@@ -163,6 +170,18 @@ class Processor(object):
 
         return img
 
+
+    def get_rotated_pictures(self, image):
+        rotator = self.rotator
+
+        yield image
+        img = rotator(image)
+        yield img
+
+        img = ndimage.rotate(img, 90, cval=255)
+        yield img
+        img = ndimage.rotate(img, 270, cval=255)
+        yield img
 
     def get_ocr_text_tesseract(self, image):
         img = self.img_preprocess(image)
@@ -325,35 +344,35 @@ class Processor(object):
 
         # self.try_detect_barcodes(frame)
         # when we get barcode bounding box -> transform the image to get nice orthogonal view (i.e apply transf. so that b.b is non-rotated rect)
-        
-        if self.ENABLE_ZBAR_CODE:
-            codes_zbar = pyzbar.decode(frame)
-            for code in codes_zbar:
-                data, type = code.data.decode("utf-8"), code.type
+        for frame in self.get_rotated_pictures(frame):
+            if self.ENABLE_ZBAR_CODE:
+                codes_zbar = pyzbar.decode(frame)
+                for code in codes_zbar:
+                    data, type = code.data.decode("utf-8"), code.type
 
-                if type == "QRCODE":
+                    if type == "QRCODE":
+                        succ, name = self.process_qr_code(data)
+                    elif type == "EAN13":
+                        succ, name = self.process_EAN_code(data)
+                    elif type == "EAN8":
+                        succ, name = self.process_EAN_code(data)
+                    else:
+                        succ, name = False, None
+
+                    if succ:
+                        return (succ, name)
+
+            if self.ENABLE_OPENCV_QR:
+                qr_codes = self.get_QR_codes_openCV(frame)
+                for data in qr_codes:
                     succ, name = self.process_qr_code(data)
-                elif type == "EAN13":
-                    succ, name = self.process_EAN_code(data)
-                elif type == "EAN8":
-                    succ, name = self.process_EAN_code(data)
-                else:
-                    succ, name = False, None
+                    if succ:
+                        return (succ, name)
 
+            if self.ENABLE_OCR:
+                succ, name = self.get_and_process_OCR(frame)
                 if succ:
                     return (succ, name)
-
-        if self.ENABLE_OPENCV_QR:
-            qr_codes = self.get_QR_codes_openCV(frame)
-            for data in qr_codes:
-                succ, name = self.process_qr_code(data)
-                if succ:
-                    return (succ, name)
-        
-        if self.ENABLE_OCR:
-            succ, name = self.get_and_process_OCR(frame)
-            if succ:
-                return (succ, name)
 
         ##         dim = (int(frame.shape[1] * 0.5), int(frame.shape[0] * 0.5))
 

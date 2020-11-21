@@ -6,3 +6,5 @@ pytesseract
 fuzzywuzzy
 python-Levenshtein
 imutils
+scipy
+tensorflow-addons
