@@ -71,7 +71,7 @@ class Processor(object):
                 list_of_words_for_ocr += [pure_name, name] + name.split()
 
         self.drug_list = drug_list                          # List of drugs full names
-        self.drug_list_processed = drug_list_processed      # List of drug names splitted in lowercase without generic fluff (potahované tablety, ...)
+        self.drug_list_processed = drug_list_processed      # List of drug names splitted in lowercase without generic fluff (potahované tablety, ...), only words longer than 2
 
         self.ean_to_drugs_dict = ean_to_drugs_dict          # EAN to full name
         self.sukl_to_drugs_dict = sukl_to_drugs_dict        # SUKL to full name
