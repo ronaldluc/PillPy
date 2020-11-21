@@ -84,8 +84,8 @@ class HTTPRequestHandler(server.BaseHTTPRequestHandler):
         self.send_response(200, 'Created')
         self.end_headers()
 
-        # reply_body = json.dumps({"success": False, "name": None})
-        reply_body = json.dumps({"success": True, "name": "Paralen"})
+        # reply_body = json.dumps({"success": False, "name": None})   # {"success": false, "name": null}
+        reply_body = json.dumps({"success": True, "name": "Paralen"}) # {"success": true, "name": "Paralen"}
         print(f"Response: {reply_body}")
 
         
