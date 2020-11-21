@@ -92,7 +92,7 @@ class Processor(object):
     def get_QR_codes_openCV(self, frame):
         detector = self.qr_detector
 
-        _, decoded_info, _, _ = detector.detectAndDecodeMulti(frame)
+        _, decoded_info, _, _ = detector.detectAndDecodeMulti(frame)        # IS_SLOW
         return decoded_info 
 
     def process_qr_code(self, code) -> Tuple[bool, str]:
@@ -187,7 +187,7 @@ class Processor(object):
         img = self.img_preprocess(image)
 
         custom_config = r'--oem 3 -l ces+en --psm 1 --user-words "' + self.OCR_DICT +  '"'
-        text_ocr = pytesseract.image_to_string(img, config=custom_config)
+        text_ocr = pytesseract.image_to_string(img, config=custom_config)                       # IS_SLOW
 
         return text_ocr
 
@@ -261,7 +261,7 @@ class Processor(object):
         results = []
 
         # loop over the bounding boxes
-        for (startX, startY, endX, endY) in boxes:
+        for (startX, startY, endX, endY) in boxes:                          # IS_SLOW: Do only for biggest box?
             # scale the bounding box coordinates based on the respective
             # ratios
             startX = int(startX * rW)
@@ -290,11 +290,18 @@ class Processor(object):
             # wish to use the LSTM neural net model for OCR, and finally
             # (3) an OEM value, in this case, 7 which implies that we are
             # treating the ROI as a single line of text
-            config = (f"-l eng --oem 1 --psm 7 --user-words {self.OCR_DICT}")       # Czech model does not help
+            config = (f"-l eng --oem 1 --psm 7 --user-words {self.OCR_DICT}")       # Czech model does not help             # IS_SLOW
             text = pytesseract.image_to_string(roi, config=config)
             # add the bounding box coordinates and OCR'd text to the list
             # of results
             results.append(((startX, startY, endX, endY), text))
+
+            config = (f"-l ces --oem 1 --psm 7 --user-words {self.OCR_DICT}")       # Czech model is sometimes detrimental  # IS_SLOW
+            text = pytesseract.image_to_string(roi, config=config)
+            # add the bounding box coordinates and OCR'd text to the list
+            # of results
+            results.append(((startX, startY, endX, endY), text))
+
         
         results = sorted(results, key=lambda r:r[0][1])
 
@@ -308,7 +315,7 @@ class Processor(object):
     def get_and_process_OCR_multirot(self, image):
         best_drug, best_score = None, -1
 
-        for rot_frame in self.get_rotated_pictures(image):
+        for rot_frame in self.get_rotated_pictures(image):          # IS_MULTIPLE
             drug, score = self.get_and_process_OCR(rot_frame)
             if score > best_score:
                 best_drug, best_score = drug, score
@@ -325,19 +332,19 @@ class Processor(object):
 
 
     def get_and_process_OCR(self, image):
-        words_set_ocr = self.get_ocr_text_EAST(image)
+        words_set_ocr = self.get_ocr_text_EAST(image)                           # IS_SLOW
         words_set_ocr = set(filter(lambda x: len(x) > 2, words_set_ocr))
 
         print(f"Found OCR EAST {words_set_ocr}")
-        best_drug_east, best_score_east = self.find_intersection_in_drugs_names_list(words_set_ocr)
+        best_drug_east, best_score_east = self.find_intersection_in_drugs_names_list(words_set_ocr)     # IS_SLOW ?
         print(best_drug_east, best_score_east)
 
         if best_score_east < 10_000:
-            text_ocr = self.get_ocr_text_tesseract(image)
+            text_ocr = self.get_ocr_text_tesseract(image)                       # IS_SLOW
             words_set_ocr = text_ocr.lower().split()
 
             print(f"Found OCR TESS {words_set_ocr}")
-            best_drug_tess, best_score_tess = self.find_intersection_in_drugs_names_list(words_set_ocr)
+            best_drug_tess, best_score_tess = self.find_intersection_in_drugs_names_list(words_set_ocr) # IS_SLOW ?
             print(best_drug_tess, best_score_tess)
         else:
             best_drug_tess, best_score_tess = None, -1
@@ -358,9 +365,9 @@ class Processor(object):
 
         # self.try_detect_barcodes(frame)
         # when we get barcode bounding box -> transform the image to get nice orthogonal view (i.e apply transf. so that b.b is non-rotated rect)
-        for rot_frame in self.get_rotated_pictures(frame):
+        for rot_frame in self.get_rotated_pictures(frame):          # IS_MULTIPLE
             if self.ENABLE_ZBAR_CODE:
-                codes_zbar = pyzbar.decode(rot_frame)
+                codes_zbar = pyzbar.decode(rot_frame)               # IS_SLOW
                 for code in codes_zbar:
                     data, type = code.data.decode("utf-8"), code.type
 
