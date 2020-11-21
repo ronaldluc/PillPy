@@ -10,13 +10,14 @@ import pytesseract
 import re
 import csv
 
-
+from text_recognition import decode_predictions
+from imutils.object_detection import non_max_suppression
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 class Processor(object):
-    ENABLE_ZBAR_CODE = True
-    ENABLE_OPENCV_QR = True
+    ENABLE_ZBAR_CODE = False
+    ENABLE_OPENCV_QR = False
     ENABLE_OCR = True
 
 
@@ -25,6 +26,7 @@ class Processor(object):
     SUKL_FILE = "./../../data/benu_sukl.csv"
 
     OCR_DICT = "./../../data/OCR_dict.txt"
+    EAST_DETECTOR = "./frozen_east_text_detection.pb"
 
     @staticmethod
     def __until_first_lower_case(string):
@@ -148,8 +150,18 @@ class Processor(object):
         return box
 
     def get_ocr_text_tesseract(self, image):
+        img_grey = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        img = cv2.adaptiveThreshold(img_grey, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2)
+
+        #img = cv2.bitwise_not(img)
+        kernel = np.ones((1,1), "uint8")
+        img = cv2.dilate(img, kernel, iterations=2)
+        img = cv2.erode(img, kernel, iterations=2)
+        img = cv2.GaussianBlur(img, (5,5), 0)
+        img = cv2.medianBlur(img,5)
+
         custom_config = r'--oem 3 -l ces+en --psm 1 --user-words "' + self.OCR_DICT +  '"'
-        text_ocr = pytesseract.image_to_string(image, config=custom_config)
+        text_ocr = pytesseract.image_to_string(img, config=custom_config)
 
         return text_ocr
 
@@ -182,10 +194,98 @@ class Processor(object):
 
         return best_drug
 
+    def get_ocr_text_EAST(self, image):
+        (origH, origW) = image.shape[:2]
+        orig = image.copy()
+
+        # set the new width and height and then determine the ratio in change
+        # for both the width and height
+        (newW, newH) = (320, 320)
+        rW = origW / float(newW)
+        rH = origH / float(newH)
+
+
+        # resize the image and grab the new image dimensions
+        image = cv2.resize(image, (newW, newH))
+        (H, W) = image.shape[:2]
+
+        # define the two output layer names for the EAST detector model that
+        # we are interested -- the first is the output probabilities and the
+        # second can be used to derive the bounding box coordinates of text
+        layerNames = [
+        	"feature_fusion/Conv_7/Sigmoid",
+        	"feature_fusion/concat_3"]
+
+        # load the pre-trained EAST text detector
+        print("[INFO] loading EAST text detector...")
+        net = cv2.dnn.readNet(self.EAST_DETECTOR)
+
+        # construct a blob from the image and then perform a forward pass of
+        # the model to obtain the two output layer sets
+        blob = cv2.dnn.blobFromImage(image, 1.0, (W, H),
+        	(123.68, 116.78, 103.94), swapRB=True, crop=False)
+        net.setInput(blob)
+        (scores, geometry) = net.forward(layerNames)
+
+        # decode the predictions, then  apply non-maxima suppression to
+        # suppress weak, overlapping bounding boxes
+        (rects, confidences) = decode_predictions(scores, geometry, min_conf=0.5)
+        boxes = non_max_suppression(np.array(rects), probs=confidences)
+
+        # initialize the list of results
+        results = []
+
+        # loop over the bounding boxes
+        for (startX, startY, endX, endY) in boxes:
+        	# scale the bounding box coordinates based on the respective
+        	# ratios
+        	startX = int(startX * rW)
+        	startY = int(startY * rH)
+        	endX = int(endX * rW)
+        	endY = int(endY * rH)
+
+        	# in order to obtain a better OCR of the text we can potentially
+        	# apply a bit of padding surrounding the bounding box -- here we
+        	# are computing the deltas in both the x and y directions
+        	dX = int((endX - startX) * 0.05)
+        	dY = int((endY - startY) * 0.05)
+
+        	# apply padding to each side of the bounding box, respectively
+        	startX = max(0, startX - dX)
+        	startY = max(0, startY - dY)
+        	endX = min(origW, endX + (dX * 2))
+        	endY = min(origH, endY + (dY * 2))
+
+        	# extract the actual padded ROI
+        	roi = orig[startY:endY, startX:endX]
+
+        	# in order to apply Tesseract v4 to OCR text we must supply
+        	# (1) a language, (2) an OEM flag of 4, indicating that the we
+        	# wish to use the LSTM neural net model for OCR, and finally
+        	# (3) an OEM value, in this case, 7 which implies that we are
+        	# treating the ROI as a single line of text
+        	config = (f"-l eng+ces --oem 1 --psm 7 --user-words {self.OCR_DICT}")
+        	text = pytesseract.image_to_string(roi, config=config)
+
+        	# add the bounding box coordinates and OCR'd text to the list
+        	# of results
+        	results.append(((startX, startY, endX, endY), text))
+        
+        results = sorted(results, key=lambda r:r[0][1])
+
+        results_processed = []
+        for (_, single_text) in results:
+            single_text = "".join([c if ord(c) < 128 else "" for c in single_text]).strip()
+            results_processed.append(single_text)
+
+        return results_processed
+
     def get_and_process_OCR(self, image):
         text_ocr = self.get_ocr_text_tesseract(image)
         words_set_ocr = text_ocr.lower().split()
-        words_set_ocr = set(filter(lambda x: len(x) > 2, words_set_ocr))
+        
+        #words_set_ocr = self.get_ocr_text_EAST(image)
+        #words_set_ocr = set(filter(lambda x: len(x) > 2, words_set_ocr))
 
         print(f"Found OCR {words_set_ocr}")
         best_drug = self.find_intersection_in_drugs_names_list(words_set_ocr)
