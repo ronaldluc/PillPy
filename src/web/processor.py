@@ -7,6 +7,7 @@ import numpy as np
 from pyzbar import pyzbar
 import pytesseract
 import re
+import csv
 
 
 from PIL import ImageFile
@@ -19,21 +20,50 @@ class Processor(object):
 
     DRUG_LIST_FILE = "./../../data/drug_names.txt"
     EAN_TO_DRUG_LIST_FILE = "./../../data/drug_ean_to_names.txt"
+    SUKL_FILE = "./../../data/benu_sukl.csv"
+
+    @staticmethod
+    def __until_first_lower_case(string):
+        for i, c in enumerate(string):
+            if c != c.upper():
+                return string[:i]
+        return string
 
     def __init__(self) -> None:
         self.qr_detector = cv2.QRCodeDetector()
+       
+        drug_list = []
+        drug_list_processed = []
         with open(self.DRUG_LIST_FILE) as drug_list_f:
-            self.drug_list = drug_list_f.readlines()
-            self.drug_list_processed = list(map(lambda x: set(x.lower().split()), self.drug_list))
+            drug_list = drug_list_f.readlines()
+            drug_list_processed = list(map(lambda x: set(x.lower().split()), drug_list))
 
+        ean_to_drugs_dict = {}
         with open(self.EAN_TO_DRUG_LIST_FILE) as drug_list_f:
             ean_to_drugs_list = drug_list_f.readlines()
-            ean_to_drugs_dict = {}
             for ean_to_drug in ean_to_drugs_list:
                 ean, drug = ean_to_drug.split(" ", 1)
                 ean_to_drugs_dict[ean] = drug
 
-            self.ean_to_drugs_dict = ean_to_drugs_dict
+        sukl_to_drugs_dict = {}
+
+        with open(self.SUKL_FILE) as sukl_f:
+            reader = csv.DictReader(sukl_f)
+            for row in reader:
+                sukl, name, ean = row["sukl_code"], row["name"], row["ean_code"]
+                pure_name = self.__until_first_lower_case(name)
+
+                drug_list.append(name)
+                drug_list_processed.append(set(pure_name.lower().split()))
+
+                ean_to_drugs_dict[ean] = name
+                sukl_to_drugs_dict[sukl] = name
+
+        self.drug_list = drug_list                          # List of drugs full names
+        self.drug_list_processed = drug_list_processed      # List of sets: each set one drug without generic words (e.g. potahované tablety)
+
+        self.ean_to_drugs_dict = ean_to_drugs_dict          # EAN to full name
+        self.sukl_to_drugs_dict = sukl_to_drugs_dict        # SUKL to full name
 
     def get_QR_codes_openCV(self, frame):
         detector = self.qr_detector
