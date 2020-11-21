@@ -8,33 +8,26 @@ curl or wget can be used to send files with options similar to the following
 __Note__: curl automatically appends the filename onto the end of the URL so
 the path can be omitted.
 """
-from time import sleep
 
-import cv2
-import numpy as np
 import os
-
-import multiprocessing
 from pathlib import Path
 
-from glob import glob
-from PIL import ImageFile
-
-ImageFile.LOAD_TRUNCATED_IMAGES = True
+from processor import Processor
 import http.server as server
-
-import random
-import string
 
 import cgi
 import json
 import uuid
+
+
 
 class HTTPRequestHandler(server.BaseHTTPRequestHandler):
     """Extend SimpleHTTPRequestHandler to handle PUT requests"""
 
     def __init__(self, request, client_address, server):
         self.tmp_folder_path = self.init_tmp_folder()
+        self.processor = Processor()
+
         super().__init__(request, client_address, server)
 
     def init_tmp_folder(self):
@@ -67,30 +60,15 @@ class HTTPRequestHandler(server.BaseHTTPRequestHandler):
         with open(file_path, 'wb') as output_file:
             output_file.write(msg_raw)
 
-        frame = cv2.imread(file_path)
+        success, name = self.processor.process(file_path)
+        response = json.dumps({"success": success, "name": name})
 
-        width = int(frame.shape[1])
-        height = int(frame.shape[0])
-
-        print(f"Uploaded w:{width}, h:{height}")
-        ##         dim = (int(frame.shape[1] * 0.5), int(frame.shape[0] * 0.5))
-
-        #frame = frame[(frame.shape[0] - height) // 2: (frame.shape[0] + height) // 2,
-                #(frame.shape[1] - width) // 2:  (frame.shape[1] + width) // 2]
-        ##         frame = cv2.resize(frame, dim, interpolation = cv2.INTER_AREA)
-        ##         crop_img = img[y:y+h, x:x+w]
-        #cv2.imwrite('cropped.jpg', frame)
-
-        #img = open_image('cropped.jpg')
-        #cat, _, prob = self.model.predict(img)
         self.send_response(200, 'Created')
         self.end_headers()
 
-        # reply_body = json.dumps({"success": False, "name": None})   # {"success": false, "name": null}
-        reply_body = json.dumps({"success": True, "name": "Paralen"}) # {"success": true, "name": "Paralen"}
-        print(f"Response: {reply_body}")
+        print(f"Response: {response}")
 
-        self.wfile.write(reply_body.encode('utf-8'))
+        self.wfile.write(response.encode('utf-8'))
         
         # cleanup
         #os.remove(file_path)
