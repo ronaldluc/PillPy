@@ -18,9 +18,12 @@ class Processor(object):
     ENABLE_OPENCV_QR = True
     ENABLE_OCR = True
 
+
     DRUG_LIST_FILE = "./../../data/drug_names.txt"
     EAN_TO_DRUG_LIST_FILE = "./../../data/drug_ean_to_names.txt"
     SUKL_FILE = "./../../data/benu_sukl.csv"
+
+    OCR_DICT = "./../../data/OCR_dict.txt"
 
     @staticmethod
     def __until_first_lower_case(string):
@@ -31,12 +34,15 @@ class Processor(object):
 
     def __init__(self) -> None:
         self.qr_detector = cv2.QRCodeDetector()
-       
+
+        list_of_words_for_ocr = []
+
         drug_list = []
         drug_list_processed = []
         with open(self.DRUG_LIST_FILE) as drug_list_f:
             drug_list = drug_list_f.readlines()
             drug_list_processed = list(map(lambda x: set(x.lower().split()), drug_list))
+            list_of_words_for_ocr += drug_list
 
         ean_to_drugs_dict = {}
         with open(self.EAN_TO_DRUG_LIST_FILE) as drug_list_f:
@@ -58,12 +64,16 @@ class Processor(object):
 
                 ean_to_drugs_dict[ean] = name
                 sukl_to_drugs_dict[sukl] = name
+                list_of_words_for_ocr += [pure_name, name] + name.split()
 
         self.drug_list = drug_list                          # List of drugs full names
         self.drug_list_processed = drug_list_processed      # List of sets: each set one drug without generic words (e.g. potahované tablety)
 
         self.ean_to_drugs_dict = ean_to_drugs_dict          # EAN to full name
         self.sukl_to_drugs_dict = sukl_to_drugs_dict        # SUKL to full name
+
+        with open(self.OCR_DICT, "w") as f_ocr_dict:
+            f_ocr_dict.writelines(map(lambda x: x+"\n", list_of_words_for_ocr))
 
     def get_QR_codes_openCV(self, frame):
         detector = self.qr_detector
@@ -134,7 +144,7 @@ class Processor(object):
         return box
 
     def get_ocr_text_tesseract(self, image):
-        custom_config = r'--oem 3 -l ces+en --psm 1 --user-words "' + self.DRUG_LIST_FILE +  '"'
+        custom_config = r'--oem 3 -l ces+en --psm 1 --user-words "' + self.OCR_DICT +  '"'
         text_ocr = pytesseract.image_to_string(image, config=custom_config)
 
         return text_ocr
