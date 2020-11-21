@@ -3,3 +3,5 @@ numpy
 pillow
 pyzbar
 pytesseract
+fuzzywuzzy
+python-Levenshtein

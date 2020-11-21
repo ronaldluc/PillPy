@@ -1,4 +1,5 @@
 from os import PathLike
+from fuzzywuzzy import fuzz
 
 import sys
 from typing import Tuple
@@ -42,8 +43,9 @@ class Processor(object):
         with open(self.DRUG_LIST_FILE) as drug_list_f:
             drug_list = drug_list_f.readlines()
             for drug in drug_list:
-                drug_list_processed.append(drug.lower().split())
-                list_of_words_for_ocr.append(drug.lower().split())
+                drug_list_processed.append(list(filter(lambda x: len(x) > 2, drug.lower().split())))
+
+                list_of_words_for_ocr += drug.lower().split()
                 list_of_words_for_ocr.append(drug)
 
         ean_to_drugs_dict = {}
@@ -62,14 +64,14 @@ class Processor(object):
                 pure_name = self.__until_first_lower_case(name)
 
                 drug_list.append(name)
-                drug_list_processed.append(set(pure_name.lower().split()))
+                drug_list_processed.append(list(filter(lambda x: len(x) > 2, pure_name.lower().split())))
 
                 ean_to_drugs_dict[ean] = name
                 sukl_to_drugs_dict[sukl] = name
                 list_of_words_for_ocr += [pure_name, name] + name.split()
 
         self.drug_list = drug_list                          # List of drugs full names
-        self.drug_list_processed = drug_list_processed      # List of sets: each set one drug without generic words (e.g. potahované tablety)
+        self.drug_list_processed = drug_list_processed      # List of drug names splitted in lowercase without generic fluff (potahované tablety, ...)
 
         self.ean_to_drugs_dict = ean_to_drugs_dict          # EAN to full name
         self.sukl_to_drugs_dict = sukl_to_drugs_dict        # SUKL to full name
@@ -152,21 +154,38 @@ class Processor(object):
         return text_ocr
 
     def find_intersection_in_drugs_names_list(self, set_of_words):
-        best_drug, best_drug_inter_len = None, -1
-        for i, drug_hr in enumerate(self.drug_list):
-            drug_processed_set = self.drug_list_processed[i]
+        best_drug, best_drug_score = None, -1
 
-            intersection_len = len(set_of_words.intersection(drug_processed_set))
-            
-            if intersection_len > 0 and intersection_len > best_drug_inter_len:
-                best_drug_inter_len, best_drug = intersection_len, drug_hr
+        for i, drug_hr in enumerate(self.drug_list):
+            score = -1
+            drug_processed = self.drug_list_processed[i]
+
+            for word in set_of_words:
+                for wi, drug_processed_part in enumerate(drug_processed):
+                    part_score = fuzz.ratio(word, drug_processed_part)
+                    if part_score < 50: part_score = 0              # Disregard non-matches
+
+                    if wi == 0:                                     # First few words are more important
+                        part_score *= 10
+                        if part_score > 850: part_score *= 1000     # High first word match -> most important
+
+                    elif wi == 1: part_score *= 3
+                    elif wi == 2: part_score *= 1.2
+
+                    score += part_score
+                    if part_score > 0:
+                        print("AAAAA", word, drug_processed_part, part_score, score)
+ 
+
+            if score > 0 and score > best_drug_score:
+                best_drug_score, best_drug = score, drug_hr
 
         return best_drug
 
-
     def get_and_process_OCR(self, image):
         text_ocr = self.get_ocr_text_tesseract(image)
-        words_set_ocr = set(text_ocr.lower().split())
+        words_set_ocr = text_ocr.lower().split()
+        words_set_ocr = set(filter(lambda x: len(x) > 2, words_set_ocr))
 
         print(f"Found OCR {words_set_ocr}")
         best_drug = self.find_intersection_in_drugs_names_list(words_set_ocr)
