@@ -173,8 +173,8 @@ class Processor(object):
                     elif wi == 2: part_score *= 1.2
 
                     score += part_score
-                    if part_score > 0:
-                        print("AAAAA", word, drug_processed_part, part_score, score)
+                    if part_score > 0 and False:
+                        print("Part match:", word, drug_processed_part, part_score, score)
  
 
             if score > 0 and score > best_drug_score:
