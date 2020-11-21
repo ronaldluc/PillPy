@@ -16,8 +16,13 @@ class Processor(object):
     ENABLE_OPENCV_QR = True
     ENABLE_OCR = True
 
+    DRUG_LIST_FILE = "./../../data/drug_names.txt"
+
     def __init__(self) -> None:
-        self.qr_detector = cv2.QRCodeDetector() 
+        self.qr_detector = cv2.QRCodeDetector()
+        with open(self.DRUG_LIST_FILE) as drug_list_f:
+            self.drug_list = drug_list_f.readlines()
+            self.drug_list_processed = list(map(lambda x: set(x.lower().split()), self.drug_list))
 
     def get_QR_codes_openCV(self, frame):
         detector = self.qr_detector
@@ -79,10 +84,28 @@ class Processor(object):
         # actually gets you rotated rect instead of quadrilateral
         return box
 
-    def get_and_process_OCR(self, image):
-        custom_config = r'--oem 3 --psm 1 --user-words "./data/drug_names.txt"'
+    def get_ocr_text_tesseract(self, image):
+        custom_config = r'--oem 3 --psm 1 --user-words "' + self.DRUG_LIST_FILE +  '"'
         text_ocr = pytesseract.image_to_string(image, config=custom_config)
-        print(text_ocr)
+
+        return text_ocr
+
+    def get_and_process_OCR(self, image):
+        text_ocr = self.get_ocr_text_tesseract(image)
+        words_set_ocr = set(text_ocr.lower().split())
+
+        print(words_set_ocr)
+
+        best_drug, best_drug_inter_len = None, -1
+        for i, drug_hr in enumerate(self.drug_list):
+            drug_processed_set = self.drug_list_processed[i]
+
+            intersection_len = len(words_set_ocr.intersection(drug_processed_set))
+            
+            if intersection_len > 0 and intersection_len > best_drug_inter_len:
+                best_drug_inter_len, best_drug = intersection_len, drug_hr
+
+        print(best_drug)
         
         return (True, "Paralen")
 
