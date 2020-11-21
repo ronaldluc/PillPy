@@ -80,7 +80,7 @@ class Processor(object):
         return box
 
     def get_and_process_OCR(self, image):
-        custom_config = r'--oem 3 --psm 6'
+        custom_config = r'--oem 3 --psm 1 --user-words "./data/drug_names.txt"'
         text_ocr = pytesseract.image_to_string(image, config=custom_config)
         print(text_ocr)
         
