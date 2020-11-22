@@ -28,7 +28,7 @@ class Processor(object):
 
     DRUG_LIST_FILE = "./../../data/drug_names.txt"
     EAN_TO_DRUG_LIST_FILE = "./../../data/drug_ean_to_names.txt"
-    SUKL_FILE = "./../../data/benu_sukl.csv"
+    SUKL_FILE = "./../../data/sukl.csv"
 
     OCR_DICT = "./../../data/OCR_dict.txt"
     EAST_DETECTOR = "./frozen_east_text_detection.pb"
