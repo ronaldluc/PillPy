@@ -296,6 +296,13 @@ class Processor(object):
             # of results
             results.append(((startX, startY, endX, endY), text))
 
+            config = (f"-l eng --oem 1 --psm 8 --user-words {self.OCR_DICT}")       # Czech model does not help             # IS_SLOW
+            text = pytesseract.image_to_string(roi, config=config)
+            # add the bounding box coordinates and OCR'd text to the list
+            # of results
+            results.append(((startX, startY, endX, endY), text))
+
+
             config = (f"-l ces --oem 1 --psm 7 --user-words {self.OCR_DICT}")       # Czech model is sometimes detrimental  # IS_SLOW
             text = pytesseract.image_to_string(roi, config=config)
             # add the bounding box coordinates and OCR'd text to the list
