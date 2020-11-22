@@ -10,27 +10,27 @@ import pytesseract
 import re
 import csv
 
-import tensorflow as tf
+#import tensorflow as tf
 from scipy import ndimage
 
 from text_recognition import decode_predictions
 from imutils.object_detection import non_max_suppression
-from rotator import Rotator
+#from rotator import Rotator
 
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 class Processor(object):
     ENABLE_ZBAR_CODE = False
-    ENABLE_OPENCV_QR = True
+    ENABLE_OPENCV_QR = False
     ENABLE_OCR = True
 
 
-    DRUG_LIST_FILE = "./../../data/drug_names.txt"
+    DRUG_LIST_FILE = "./../../data/drug_names_test.txt"
     EAN_TO_DRUG_LIST_FILE = "./../../data/drug_ean_to_names.txt"
-    SUKL_FILE = "./../../data/benu_sukl.csv"
+    SUKL_FILE = "./../../data/test_sukl.csv"
 
-    OCR_DICT = "./../../data/OCR_dict.txt"
+    OCR_DICT = "./../../data/OCR_dic_tt.txt"
     EAST_DETECTOR = "./frozen_east_text_detection.pb"
     ROTATOR = "./rotator_6.2"
 
@@ -44,7 +44,7 @@ class Processor(object):
     def __init__(self) -> None:
         self.qr_detector = cv2.QRCodeDetector()
         self.east = cv2.dnn.readNet(self.EAST_DETECTOR)        # load the pre-trained EAST text detector
-        self.rotator = Rotator(self.ROTATOR)
+        #self.rotator = Rotator(self.ROTATOR)
 
         list_of_words_for_ocr = []
 
@@ -172,16 +172,16 @@ class Processor(object):
 
 
     def get_rotated_pictures(self, image):
-        rotator = self.rotator
+        #rotator = self.rotator
 
         yield image
-        img = rotator(image)
-        yield img
+        #img = rotator(image)
+        #yield img
 
-        img = ndimage.rotate(img, 90, cval=255)
-        yield img
-        img = ndimage.rotate(img, 270, cval=255)
-        yield img
+        #img = ndimage.rotate(img, 90, cval=255)
+        #yield img
+        #img = ndimage.rotate(img, 270, cval=255)
+        #yield img
 
     def get_ocr_text_tesseract(self, image):
         img = self.img_preprocess(image)
@@ -296,11 +296,11 @@ class Processor(object):
             # of results
             results.append(((startX, startY, endX, endY), text))
 
-            config = (f"-l eng --oem 1 --psm 8 --user-words {self.OCR_DICT}")       # Czech model does not help             # IS_SLOW
-            text = pytesseract.image_to_string(roi, config=config)
+            ##config = (f"-l eng --oem 1 --psm 8 --user-words {self.OCR_DICT}")       # Czech model does not help             # IS_SLOW
+            ##ext = pytesseract.image_to_string(roi, config=config)
             # add the bounding box coordinates and OCR'd text to the list
             # of results
-            results.append(((startX, startY, endX, endY), text))
+            ##results.append(((startX, startY, endX, endY), text))
 
 
             config = (f"-l ces --oem 1 --psm 7 --user-words {self.OCR_DICT}")       # Czech model is sometimes detrimental  # IS_SLOW
