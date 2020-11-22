@@ -7,6 +7,9 @@ import 'querry.dart';
 import 'drugelement.dart';
 
 class DrugList extends StatefulWidget {
+  final QueryCtr _query;
+  DrugList(this._query);
+
   @override
   State<StatefulWidget> createState() {
     return new DrugListState();
@@ -14,7 +17,7 @@ class DrugList extends StatefulWidget {
 }
 
 class DrugListState extends State<DrugList> {
-  QueryCtr _query = QueryCtr();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,7 +34,7 @@ class DrugListState extends State<DrugList> {
           ),
           Expanded(
             child: FutureBuilder<List>(
-              future: _query.getDrugItems(),
+              future: widget._query.getDrugItems(),
               initialData: List(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {

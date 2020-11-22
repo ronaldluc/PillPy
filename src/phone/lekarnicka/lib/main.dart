@@ -11,6 +11,7 @@ import 'scanner.dart';
 
 void main() async {
   timeago.setLocaleMessages("cs", timeago.CsShortMessages());
+  timeago.setLocaleMessages("csl", timeago.CsMessages());
 
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -30,6 +31,7 @@ void main() async {
       home: DrugScanner(
         camera: firstCamera,
       ),
+      navigatorObservers: [routeObserver],
     ),
   );
 }

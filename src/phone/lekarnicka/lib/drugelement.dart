@@ -8,11 +8,8 @@ import 'drugdetail.dart';
 
 class DrugElement extends StatelessWidget {
   final DrugItem item;
-  static DateFormat dateFormat = DateFormat("dd. MM. yyyy HH:mm");
 
-  String get drugAgo {
-    return timeago.format(item.time, locale: "cs");
-  }
+
 
   const DrugElement(this.item);
 
@@ -38,12 +35,12 @@ class DrugElement extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  drugAgo,
+                  item.drugAgo,
                   textAlign: TextAlign.right,
                   style: TextStyle(fontSize: 20),
                 ),
                 Text(
-                  dateFormat.format(item.time),
+                  item.prettyTime,
                   textAlign: TextAlign.right,
                 ),
               ],
